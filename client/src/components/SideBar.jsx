@@ -2,12 +2,35 @@ import React, { useState } from 'react'
 import { useAppContext } from '../context/AppContext'
 import { assets } from '../assets/assets'
 import moment from 'moment';
+import toast from 'react-hot-toast';
 
 const SideBar = ({ isMenuOpen, setIsMenuOpen }) => {
 
-  const { user, setUser, chats, setSelectedChats, navigate } = useAppContext()
+  const { user, chats, setSelectedChats, navigate, axios, setChats, fetchUserChats, setToken, createNewChat, token } = useAppContext()
 
   const [search, setSearch] = useState('')
+
+  const logout = async () => {
+    localStorage.removeItem('token')
+    setToken(null)
+    toast.success("Logged out successfully")
+  }
+
+  const deleteChat = async (e, chatId) => {
+    try {
+      e.stopPropagation()
+      const confirm = window.confirm('Are you sure you want to delete this chat')
+      if (!confirm) return
+      const { data } = await axios.post('/api/chat/delete', { chatId }, { headers: { Authorization: token } })
+      if (data.success) {
+        setChats(prev => prev.filter(chat => chat._chatid !== chatId))
+        await fetchUserChats()
+        toast.success(data.message)
+      }
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }
 
 
   return (
@@ -16,7 +39,7 @@ const SideBar = ({ isMenuOpen, setIsMenuOpen }) => {
       <img src={assets.logo_full_dark} alt="" className='w-full max-w-48' />
 
       {/* New chat Button */}
-      <button className='flex justify-center items-center w-full py-2 mt-10 text-white bg-gradient-to-r from-[#A456f7] to-[#3D81F6] text-sm rounded-md cursor-pointer '>
+      <button onClick={createNewChat} className='flex justify-center items-center w-full py-2 mt-10 text-white bg-gradient-to-r from-[#A456f7] to-[#3D81F6] text-sm rounded-md cursor-pointer '>
         <span className='mr-2 text-2xl'>+</span> New Chat
       </button>
 
@@ -31,15 +54,15 @@ const SideBar = ({ isMenuOpen, setIsMenuOpen }) => {
       <div className='flex-1 overflow-y-scroll mt-3 text-sm space-y-3 '>
         {
           chats.filter((chat) => chat.messages[0] ? chat.messages[0]?.content.toLowerCase().includes(search.toLowerCase()) : chat.name.toLowerCase().includes(search.toLowerCase())).map((chat) => (
-            <div onClick={()=> {navigate('/'); setSelectedChats(chat); setIsMenuOpen(false)}}
-             key={chat._id} className='p-2 px-4 border border-gray-300 rounded-md cursor-pointer flex justify-between group'>
+            <div onClick={() => { navigate('/'); setSelectedChats(chat); setIsMenuOpen(false) }}
+              key={chat._id} className='p-2 px-4 border border-gray-300 rounded-md cursor-pointer flex justify-between group'>
               <div>
                 <p className='truncate w-full '>
                   {chat.messages.length > 0 ? chat.messages[0].content.slice(0, 32) : chat.name}
                 </p>
                 <p className='text-xs text-gray-500'>{moment(chat.updatedAt).fromNow()}</p>
               </div>
-              <img src={assets.binIcon} alt="" className='w-4.5 py-2 hidden group-hover:block cursor-pointer' />
+              <img onClick={e => toast.promise(deleteChat(e, chat._id), { loading: 'deleting..' })} src={assets.binIcon} alt="" className='w-4.5 py-2 hidden group-hover:block cursor-pointer' />
             </div>
           ))
         }
@@ -66,9 +89,9 @@ const SideBar = ({ isMenuOpen, setIsMenuOpen }) => {
       <div className='flex items-center gap-3 mt-4 p-2 border border-gray-300 rounded-md cursor-pointer group hover:scale-103 transition-all'>
         <img src={assets.user_icon} alt="" className='w-7 rounded-full' />
         <p className='flex-1 text-sm truncate'>{user ? user.name : 'Login to your account'}</p>
-        {user && <img src={assets.logoutIcon} className='h-5 cursor-pointer hidden group-hover:block' />}
+        {user && <img onClick={logout} src={assets.logoutIcon} className='h-5 cursor-pointer hidden group-hover:block' />}
       </div>
-      
+
       <img onClick={() => setIsMenuOpen(false)} src={assets.closeIcon} className='absolute top-3 right-3 w-5 h-5 cursor-pointer md:hidden' alt="" />
 
     </div>

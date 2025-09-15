@@ -15,7 +15,7 @@ export const createChat = async (req, res) => {
     await Chat.create(chatData);
     res.json({ success: true, message: "Chat created" });
   } catch (error) {
-    res.json({ success: false, message: error.message });
+    return res.json({ success: false, message: error.message });
   }
 };
 
@@ -27,7 +27,7 @@ export const getChats = async (req, res) => {
 
     res.json({ success: true, chats });
   } catch (error) {
-    res.json({ success: false, message: error.message });
+    return res.json({ success: false, message: error.message });
   }
 };
 
